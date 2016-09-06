@@ -1,0 +1,15 @@
+查看机器的sw DPI 分辨率 可使用如下命令
+adb shell dumpsys window
+
+查询结果如小
+.....
+WINDOW MANAGER DISPLAY CONTENTS (dumpsys window displays)
+Display: mDisplayId=0
+init=1080x1920 480dpi cur=1080x1920 app=1080x1920 rng=1080x1024-1920x1864
+deferred=false layoutNeeded=false
+.....
+mCurConfiguration={1.0 ?mcc?mnc zh_CN ldltr sw360dp w360dp h621dp 480dpi nrml long port finger -keyb/v/h -nav/h s.5}
+.....
+
+通过修改/system/build.prop 文件中的 ro.sf.lcd_density 来改变dpi（屏幕密度值），如设置为320DPI
+相应的再使用wm size 720x1280 修改屏幕分辨率
