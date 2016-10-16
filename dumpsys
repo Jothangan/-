@@ -1,0 +1,253 @@
+Currently running services:
+
+  DmAgent
+
+  DockObserver
+
+  GbaService
+
+  GpuAppSpectatorService
+
+  GuiExtService
+
+  NvRAMAgent
+
+  PPLAgent
+
+  PQ
+
+  SurfaceFlinger
+
+  accessibility
+
+  account
+
+  activity
+
+  alarm
+
+  android.security.keystore
+
+  anrmanager
+
+  appops
+
+  appwidget
+
+  assetatlas
+
+  audio
+
+  audioprofile
+
+  backup
+
+  battery
+
+  batteryproperties
+
+  batterystats
+
+  bluetooth_manager
+
+  carrier_config
+
+  clipboard
+
+  commontime_management
+
+  connectivity
+
+  consumer_ir
+
+  content
+
+  country_detector
+
+  cpuinfo
+
+  data_shaping
+
+  dbinfo
+
+  device_policy
+
+  deviceidle
+
+  devicestoragemonitor
+
+  diskstats
+
+  display
+
+  dreams
+
+  drm.drmManager
+
+  dropbox
+
+  ethernet
+
+  fingerprint
+
+  gfxinfo
+
+  graphicsstats
+
+  imms
+
+  ims
+
+  input
+
+  input_method
+
+  iphonesubinfo
+
+  isms
+
+  isub
+
+  jobscheduler
+
+  launcherapps
+
+  location
+
+  lock_settings
+
+  media.VTS
+
+  media.audio_flinger
+
+  media.audio_policy
+
+  media.camera
+
+  media.camera.proxy
+
+  media.mmsdk
+
+  media.player
+
+  media.radio
+
+  media.resource_manager
+
+  media.sound_trigger_hw
+
+  media_projection
+
+  media_router
+
+  media_session
+
+  meminfo
+
+  memory_dumper
+
+  mobile
+
+  mount
+
+  mtk-perfservice
+
+  mtk.codecservice
+
+  netpolicy
+
+  netstats
+
+  network_management
+
+  network_score
+
+  notification
+
+  package
+
+  permission
+
+  persistent_data_block
+
+  phone
+
+  phoneEx
+
+  power
+
+  print
+
+  processinfo
+
+  procstats
+
+  program_binary
+
+  recovery
+
+  restrictions
+
+  rttmanager
+
+  samplingprofiler
+
+  scheduling_policy
+
+  search
+
+  search_engine
+
+  sensorservice
+
+  serial
+
+  servicediscovery
+
+  simphonebook
+
+  sip
+
+  statusbar
+
+  telecom
+
+  telephony.registry
+
+  textservices
+
+  trust
+
+  uimode
+
+  updatelock
+
+  usagestats
+
+  usb
+
+  user
+
+  user.xposed.app
+
+  user.xposed.system
+
+  vibrator
+
+  vie_command
+
+  voiceinteraction
+
+  wallpaper
+
+  webviewupdate
+
+  wfo
+
+  wifi
+
+  wifip2p
+
+  wifiscanner
+
+  window
