@@ -4,6 +4,7 @@
 import codecs
 import csv
 import json
+import os
 import pathlib
 import random
 import re
@@ -40,6 +41,10 @@ headers = {'User-Agent': random.choice(user_agent_list)}
 get_lemmas_url = 'https://baike.baidu.com/wikitag/api/getlemmas'
 # 百度百科获取词条浏览量
 url_lemmapv = 'https://baike.baidu.com/api/lemmapv'
+# 保存目录
+save_dir = 'spiderdata'
+# 配置文件目录
+config_file_dir = 'config_dir'
 
 
 def request_by_get(url, encoding='utf-8'):
@@ -62,17 +67,24 @@ def request_by_get(url, encoding='utf-8'):
         return None
 
 
-def request_by_post(url, data):
+def request_by_post(url, data, encoding='utf-8'):
     '''
     通过post方式请求
     :param url: 链接
     :param data: post参数
     :return:
     '''
-    wb_data = requests.post(url, data=data, headers=headers, timeout=30)
-    wb_data.encoding = ('UTF-8')
-    content = wb_data.text
-    return content
+    try:
+        response = requests.post(url, data=data, headers=headers, timeout=30)
+        response.encoding = encoding
+        if response.status_code == 200:
+            return response.text
+        else:
+            print(response.status_code)
+            return None
+    except RequestException:
+        print(RequestException.args)
+        return None
 
 
 def spider_lemmas(tag_id, tag_name):
@@ -93,9 +105,9 @@ def spider_lemmas(tag_id, tag_name):
         total_str = json_content['total']
         print('tagId is {!r}, totalPage is {!r}, total_count is {!r}'
               .format(str(tag_id), str(total_page_str), str(total_str)))
-        with open(str(pathlib.Path('spiderdata', str(tag_name) + '.csv')), 'wb+') as entity_file:
+        with open(str(pathlib.Path(save_dir, str(tag_name) + '.csv')), 'wb+') as entity_file:
             entity_file.write(codecs.BOM_UTF8)
-        with open(str(pathlib.Path('spiderdata', str(tag_name) + '.csv')), 'a+', encoding='utf-8') as entity_file:
+        with open(str(pathlib.Path(save_dir, str(tag_name) + '.csv')), 'a+', encoding='utf-8') as entity_file:
             writer = csv.writer(entity_file)
             row = (
                 '词条名词',
@@ -115,9 +127,8 @@ def spider_lemmas(tag_id, tag_name):
                 print('spider tagId:{!r} page:{!r}, total_page:{!r}'.format(str(tag_id), str(page), str(total_page)))
                 if spider_lemmas_by_idx(tag_id, tag_name, page):
                     break
-
     except Exception:
-        with open(str(pathlib.Path('spiderdata', 'spider_log')), 'a+', encoding='utf-8') as spider_log_file:
+        with open(str(pathlib.Path(save_dir, 'spider_log')), 'a+', encoding='utf-8') as spider_log_file:
             spider_log_file.write('spider_lemmas failed tag_id:{!r} \n'.format(str(tag_id)))
         print(Exception.args)
 
@@ -173,7 +184,7 @@ def spider_lemmas_by_idx(tag_id, tag_name, page):
                 lemma_pic_url = ''
                 lemma_pic_height = ''
                 lemma_pic_width = ''
-            with open(str(pathlib.Path('spiderdata', str(tag_name) + '.csv')), 'a+', encoding='utf-8') as entity_file:
+            with open(str(pathlib.Path(save_dir, str(tag_name) + '.csv')), 'a+', encoding='utf-8') as entity_file:
                 writer = csv.writer(entity_file)
                 row = (
                     lemma_title,
@@ -190,14 +201,16 @@ def spider_lemmas_by_idx(tag_id, tag_name, page):
 
     except requests.exceptions.ChunkedEncodingError as erro:
         print(erro.args)
-        with open(str(pathlib.Path('spiderdata', 'spider_log')), 'a+', encoding='utf-8') as spider_log_file:
-            spider_log_file.write('spider_lemmas_by_idx tag_id:{!r}, page:{!r} failed \n'.format(str(tag_id), str(page)))
+        with open(str(pathlib.Path(save_dir, 'spider_log')), 'a+', encoding='utf-8') as spider_log_file:
+            spider_log_file.write(
+                'spider_lemmas_by_idx tag_id:{!r}, page:{!r} failed \n'.format(str(tag_id), str(page)))
         return False
 
     except Exception:
         print(Exception.args)
-        with open(str(pathlib.Path('spiderdata', 'spider_log')), 'a+', encoding='utf-8') as spider_log_file:
-            spider_log_file.write('spider_lemmas_by_idx tag_id:{!r}, page:{!r} failed \n'.format(str(tag_id), str(page)))
+        with open(str(pathlib.Path(save_dir, 'spider_log')), 'a+', encoding='utf-8') as spider_log_file:
+            spider_log_file.write(
+                'spider_lemmas_by_idx tag_id:{!r}, page:{!r} failed \n'.format(str(tag_id), str(page)))
         return False
 
 
@@ -260,12 +273,21 @@ def get_lemmapv(newLemmaIdEnc):
     return total_page_str
 
 
-start_time = time.time()
-tag_id_names = [line.strip() for line in codecs.open('tag_id_name.txt', encoding='utf-8-sig').readlines() if
-                line.strip()]
-for tag_id_name in tag_id_names:
-    tag_id = tag_id_name.split('\t')[0]
-    tag_name = tag_id_name.split('\t')[1]
-    print(tag_id, tag_name)
-    spider_lemmas(tag_id, tag_name)
-print(time.time() - start_time)
+# if not os.path.exists(save_dir):
+#     os.mkdir(save_dir)
+# while not os.path.exists(config_file_dir):
+#     print('缺少指定配置文件目录！！！' + config_file_dir)
+# file_list = os.listdir(config_file_dir)
+# while len(file_list) == 0:
+#     print('配置文件目录中未添加配置文件！！！' + config_file_dir)
+# for file in file_list:
+#     start_time = time.time()
+#     tag_id_names = [line.strip() for line in codecs.open(str(pathlib.Path(config_file_dir, file)),
+#                                                          encoding='utf-8-sig').readlines() if
+#                     line.strip()]
+#     for tag_id_name in tag_id_names:
+#         tag_id = tag_id_name.split('\t')[0]
+#         tag_name = tag_id_name.split('\t')[1]
+#         print(tag_id, tag_name)
+#         spider_lemmas(tag_id, tag_name)
+#     print(time.time() - start_time)
