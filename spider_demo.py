@@ -1,11 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# @Date    : 2018-11-19 15:03:00
-# @Author  : Your Name (you@example.org)
-# @Link    : http://example.org
-# @Version : $Id$
-
-# re_simple_compiled.py
 
 import json
 import random
@@ -39,21 +33,23 @@ user_agent_list = [
     "Mozilla/5.0 (Windows NT 6.2; WOW64) AppleWebKit/535.24 (KHTML, like Gecko) Chrome/19.0.1055.1 Safari/535.24"
 ]
 
-headers = {
-    'User-Agent': random.choice(user_agent_list)}
-headers1 = {
-    'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.92 Safari/537.36'}
+headers = {'User-Agent': random.choice(user_agent_list)}
+
+# 百度百科获取根据标签id获取词条
+get_lemmas_url = 'https://baike.baidu.com/wikitag/api/getlemmas'
+# 百度百科获取词条浏览量
+url_lemmapv = 'https://baike.baidu.com/api/lemmapv'
 
 
-def get_one_page(url, encoding='utf-8'):
+def request_by_get(url, encoding='utf-8'):
     '''
-    获取一个页面
-    :param url:
-    :param encoding:
+    通过get方式请求
+    :param url: 链接
+    :param encoding: 编码
     :return:
     '''
     try:
-        response = requests.get(url, headers=headers1, timeout=30)
+        response = requests.get(url, headers=headers, timeout=30)
         response.encoding = encoding
         if response.status_code == 200:
             return response.text
@@ -65,22 +61,30 @@ def get_one_page(url, encoding='utf-8'):
         return None
 
 
-def get_one_page_by_post(url, data):
+def request_by_post(url, data):
+    '''
+    通过post方式请求
+    :param url: 链接
+    :param data: post参数
+    :return:
+    '''
     wb_data = requests.post(url, data=data, headers=headers, timeout=30)
     wb_data.encoding = ('UTF-8')
     content = wb_data.text
     return content
 
 
-get_lemmas_url = 'https://baike.baidu.com/wikitag/api/getlemmas'
-
-
 def spider_lemmas(tag_id, tag_name):
+    '''
+    保存某个标签下的所有词条
+    :param tag_id: 标签id
+    :param tag_name: 权重较高的标签名
+    '''
     paramas = {'limit': 100,
                'tagId': tag_id,
                'page': 0}
     try:
-        content = get_one_page_by_post(url=get_lemmas_url, data=paramas)
+        content = request_by_post(url=get_lemmas_url, data=paramas)
         if content is None or content == '[]':
             return
         json_content = json.loads(content)
@@ -117,11 +121,18 @@ def spider_lemmas(tag_id, tag_name):
 
 
 def spider_lemmas_by_idx(tag_id, tag_name, page):
+    '''
+    保存某个tag_id下的某一页的所有词条
+    :param tag_id: 标签id
+    :param tag_name: 获取到的高权重标签名
+    :param page: 第几页
+    :return: 是否退出查询
+    '''
     paramas = {'limit': 100,
                'tagId': tag_id,
                'page': page}
     try:
-        content = get_one_page_by_post(url=get_lemmas_url, data=paramas)
+        content = request_by_post(url=get_lemmas_url, data=paramas)
         if content is None:
             return True
         parsed_json = json.loads(content)
@@ -133,19 +144,17 @@ def spider_lemmas_by_idx(tag_id, tag_name, page):
         num = 0
         # 步长随机，也可以采用逐步减小步长的策略，越到后面浏览量越小
         for idx in range(0, 100, 20):
-            print(idx)
             if idx < len(list):
                 entity = list[idx]
                 lemma_title = entity.get('lemmaTitle')
                 lemma_url = entity['lemmaUrl']
-                count += get_first_entity_pv(lemma_url, lemma_title)[0]
+                count += get_lemma_info(lemma_url, lemma_title)[0]
                 num += 1
         avcount = count / num
         if avcount < 10000:
-            print('===========')
+            print('达到边界，停止搜索')
             return True
-        else:
-            print('+++++++++++++++')
+        print('在边界内开始保存词条信息')
         for entity in list:
             lemma_desc = entity.get('lemmaDesc')
             lemma_desc = re.sub('[\n\t\r ]*', '', lemma_desc.strip())
@@ -153,7 +162,7 @@ def spider_lemmas_by_idx(tag_id, tag_name, page):
             lemma_title = entity.get('lemmaTitle')
             lemma_url = entity['lemmaUrl']
             lemma_pic = entity['lemmaPic']
-            count, tag_names = get_first_entity_pv(lemma_url, lemma_title)
+            count, tag_list = get_lemma_info(lemma_url, lemma_title)
             if lemma_pic != []:
                 lemma_pic_url = lemma_pic['url']
                 lemma_pic_height = lemma_pic['height']
@@ -166,7 +175,7 @@ def spider_lemmas_by_idx(tag_id, tag_name, page):
                 writer = csv.writer(entity_file)
                 row = (
                     lemma_title,
-                    str(tag_names),
+                    str(tag_list),
                     lemma_desc,
                     str(count),
                     str(lemma_id),
@@ -186,18 +195,29 @@ def spider_lemmas_by_idx(tag_id, tag_name, page):
         return spider_lemmas_by_idx(tag_id, tag_name, page)
 
 
-def get_first_entity_pv(url, title):
+def get_lemma_info(url, title):
+    '''
+    获取词条信息
+    :param url:词条链接
+    :param title: 词条名
+    :return: 词条浏览量，词条标签列表
+    '''
     print('spider {!r} , url is: {!r}'.format(title, url))
-    html = get_one_page(url)
+    html = request_by_get(url)
     if html is None:
         return 10001, None
-    tag_names = get_tag_name(html)
+    tag_list = get_tag_list(html)
     newLemmaIdEnc = parse_enc(html)
-    count = get_lemmapv(id=newLemmaIdEnc)
-    return count, tag_names
+    count = get_lemmapv(newLemmaIdEnc=newLemmaIdEnc)
+    return count, tag_list
 
 
-def get_tag_name(html):
+def get_tag_list(html):
+    '''
+    获取词条的标签列表
+    :param html: 对应词条的页面
+    :return: 对应词条的标签列表
+    '''
     selector = etree.HTML(html)
     hrefs = selector.xpath('//*[@id="open-tag-item"]/span')
     if hrefs is None:
@@ -206,7 +226,11 @@ def get_tag_name(html):
 
 
 def parse_enc(html):
-    import re
+    '''
+    通过正则匹配从网页中获取词条的newLemmaIdEnc
+    :param html: 对应词条的页面
+    :return: 对应词条的newLemmaIdEnc
+    '''
     ret = re.findall(r'newLemmaIdEnc:\"(.+?)\"', html)
     if len(ret) == 1:
         return ret[0]
@@ -214,10 +238,15 @@ def parse_enc(html):
         return ""
 
 
-def get_lemmapv(id):
-    url_baike_lemmapv = url_lemmapv + '?id=' + id + '&r=' + str(random.random())
+def get_lemmapv(newLemmaIdEnc):
+    '''
+    获取词条浏览量
+    :param newLemmaIdEnc: 经过加密的id
+    :return: 词条浏览量
+    '''
+    url_baike_lemmapv = url_lemmapv + '?id=' + newLemmaIdEnc + '&r=' + str(random.random())
     print(url_baike_lemmapv)
-    content = get_one_page(url=url_baike_lemmapv)
+    content = request_by_get(url=url_baike_lemmapv)
     if content is None:
         return 10001
     json_content = json.loads(content)
@@ -225,9 +254,9 @@ def get_lemmapv(id):
     return total_page_str
 
 
-url_lemmapv = 'https://baike.baidu.com/api/lemmapv'
 start_time = time.time()
-tag_id_names = [line.strip() for line in codecs.open('tag_id_name.txt', encoding='utf-8-sig').readlines() if line.strip()]
+tag_id_names = [line.strip() for line in codecs.open('tag_id_name.txt', encoding='utf-8-sig').readlines() if
+                line.strip()]
 for tag_id_name in tag_id_names:
     tag_id = tag_id_name.split('\t')[0]
     tag_name = tag_id_name.split('\t')[1]
