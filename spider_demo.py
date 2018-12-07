@@ -1,16 +1,17 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import json
-import random
-import pathlib
-import time
 import codecs
-from lxml import etree
-import requests
-from requests import RequestException
-import re
 import csv
+import json
+import pathlib
+import random
+import re
+import time
+
+import requests
+from lxml import etree
+from requests import RequestException
 
 user_agent_list = [
     "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.1 (KHTML, like Gecko) Chrome/22.0.1207.1 Safari/537.1",
@@ -116,8 +117,9 @@ def spider_lemmas(tag_id, tag_name):
                     break
 
     except Exception:
+        with open(str(pathlib.Path('spiderdata', 'spider_log')), 'a+', encoding='utf-8') as spider_log_file:
+            spider_log_file.write('spider_lemmas failed tag_id:{!r} \n'.format(str(tag_id)))
         print(Exception.args)
-        spider_lemmas(tag_id, tag_name)
 
 
 def spider_lemmas_by_idx(tag_id, tag_name, page):
@@ -188,11 +190,15 @@ def spider_lemmas_by_idx(tag_id, tag_name, page):
 
     except requests.exceptions.ChunkedEncodingError as erro:
         print(erro.args)
-        return spider_lemmas_by_idx(tag_id, tag_name, page)
+        with open(str(pathlib.Path('spiderdata', 'spider_log')), 'a+', encoding='utf-8') as spider_log_file:
+            spider_log_file.write('spider_lemmas_by_idx tag_id:{!r}, page:{!r} failed \n'.format(str(tag_id), str(page)))
+        return False
 
     except Exception:
         print(Exception.args)
-        return spider_lemmas_by_idx(tag_id, tag_name, page)
+        with open(str(pathlib.Path('spiderdata', 'spider_log')), 'a+', encoding='utf-8') as spider_log_file:
+            spider_log_file.write('spider_lemmas_by_idx tag_id:{!r}, page:{!r} failed \n'.format(str(tag_id), str(page)))
+        return False
 
 
 def get_lemma_info(url, title):
