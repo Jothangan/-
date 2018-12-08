@@ -87,6 +87,31 @@ def request_by_post(url, data, encoding='utf-8'):
         return None
 
 
+def get_lemma_count(tag_id):
+    '''
+    保存某个标签下词条总量和页面总量
+    :param tag_id: 标签id
+    '''
+    paramas = {'limit': 100,
+               'tagId': tag_id,
+               'page': 0}
+    try:
+        content = request_by_post(url=get_lemmas_url, data=paramas)
+        if content is None or content == '[]':
+            return
+        json_content = json.loads(content)
+        total_page_str = json_content['totalPage']
+        total_str = json_content['total']
+        print('tagId is {!r}, totalPage is {!r}, total_count is {!r}'
+              .format(str(tag_id), str(total_page_str), str(total_str)))
+        return total_page_str
+    except Exception:
+        with open(str(pathlib.Path(save_dir, 'spider_log')), 'a+', encoding='utf-8') as spider_log_file:
+            spider_log_file.write('spider_lemmas failed tag_id:{!r} \n'.format(str(tag_id)))
+        print(Exception.args)
+        return 0
+
+
 def spider_lemmas(tag_id, tag_name):
     '''
     保存某个标签下的所有词条
@@ -271,7 +296,6 @@ def get_lemmapv(newLemmaIdEnc):
     json_content = json.loads(content)
     total_page_str = json_content['pv']
     return total_page_str
-
 
 # if not os.path.exists(save_dir):
 #     os.mkdir(save_dir)
