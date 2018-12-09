@@ -41,10 +41,8 @@ headers = {'User-Agent': random.choice(user_agent_list)}
 get_lemmas_url = 'https://baike.baidu.com/wikitag/api/getlemmas'
 # 百度百科获取词条浏览量
 url_lemmapv = 'https://baike.baidu.com/api/lemmapv'
-# 保存目录
-save_dir = 'spiderdata'
-# 配置文件目录
-config_file_dir = 'config_dir'
+save_dir = 'spiderdata'  # 保存目录
+config_file_dir = 'config_dir'  # 配置文件目录
 
 
 def request_by_get(url, encoding='utf-8'):
@@ -104,12 +102,12 @@ def get_lemma_count(tag_id):
         total_str = json_content['total']
         print('tagId is {!r}, totalPage is {!r}, total_count is {!r}'
               .format(str(tag_id), str(total_page_str), str(total_str)))
-        return total_page_str
+        return total_page_str, total_str
     except Exception:
         with open(str(pathlib.Path(save_dir, 'spider_log')), 'a+', encoding='utf-8') as spider_log_file:
             spider_log_file.write('spider_lemmas failed tag_id:{!r} \n'.format(str(tag_id)))
         print(Exception.args)
-        return 0
+        return 0, 0
 
 
 def spider_lemmas(tag_id, tag_name):
