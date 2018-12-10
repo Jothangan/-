@@ -4,11 +4,9 @@
 import codecs
 import csv
 import json
-import os
 import pathlib
 import random
 import re
-import time
 
 import requests
 from lxml import etree
@@ -41,8 +39,10 @@ headers = {'User-Agent': random.choice(user_agent_list)}
 get_lemmas_url = 'https://baike.baidu.com/wikitag/api/getlemmas'
 # 百度百科获取词条浏览量
 url_lemmapv = 'https://baike.baidu.com/api/lemmapv'
-save_dir = 'spiderdata'  # 保存目录
-config_file_dir = 'config_dir'  # 配置文件目录
+# 保存目录
+save_dir = 'spiderdata'
+# 配置文件目录
+config_file_dir = 'config_dir'
 
 
 def request_by_get(url, encoding='utf-8'):
@@ -182,9 +182,13 @@ def spider_lemmas_by_idx(tag_id, tag_name, page):
         for idx in range(0, 100, 20):
             if idx < len(list):
                 entity = list[idx]
-                lemma_title = entity.get('lemmaTitle')
                 lemma_url = entity['lemmaUrl']
-                count += get_lemma_info(lemma_url, lemma_title)[0]
+                html = request_by_get(lemma_url)
+                if html is None:
+                    count += 10001
+                else:
+                    newLemmaIdEnc = parse_enc(html)
+                    count += get_lemmapv(newLemmaIdEnc=newLemmaIdEnc)
                 num += 1
         avcount = count / num
         if avcount < 10000:
@@ -198,7 +202,18 @@ def spider_lemmas_by_idx(tag_id, tag_name, page):
             lemma_title = entity.get('lemmaTitle')
             lemma_url = entity['lemmaUrl']
             lemma_pic = entity['lemmaPic']
-            count, tag_list = get_lemma_info(lemma_url, lemma_title)
+
+            html = request_by_get(lemma_url)
+            if html is None:
+                return False
+            tag_list = get_tag_list(html)
+            newLemmaIdEnc = parse_enc(html)
+            count = get_lemmapv(newLemmaIdEnc=newLemmaIdEnc)
+            selector = etree.HTML(html)
+            description = get_description(selector)
+            if not description == '':
+                lemma_desc = description
+            lemma_info_tab = get_info_tab(selector)
             if lemma_pic != []:
                 lemma_pic_url = lemma_pic['url']
                 lemma_pic_height = lemma_pic['height']
@@ -218,7 +233,8 @@ def spider_lemmas_by_idx(tag_id, tag_name, page):
                     lemma_url,
                     lemma_pic_url,
                     str(lemma_pic_height),
-                    str(lemma_pic_width)
+                    str(lemma_pic_width),
+                    str(lemma_info_tab)
                 )
                 writer.writerow(row)
 
@@ -251,7 +267,80 @@ def get_lemma_info(url, title):
     tag_list = get_tag_list(html)
     newLemmaIdEnc = parse_enc(html)
     count = get_lemmapv(newLemmaIdEnc=newLemmaIdEnc)
+    selector = etree.HTML(html)
+    get_description(selector)
+    get_info_tab(selector)
     return count, tag_list
+
+
+def get_description(selector):
+    '''
+    获取词条简介描述
+    :param selector:
+    :return:
+    '''
+    data = selector.xpath('//div[@class="lemma-summary"]/div[@class="para"]')
+    description = ""
+    for item in data:
+        description += item.xpath('string(.)')
+    return description
+
+
+def get_info_tab(selector):
+    '''
+    获取表格介绍
+    :param selector:
+    :return:
+    '''
+    property_key_items = selector.xpath('//dt[@class="basicInfo-item name"]')
+    property_value_items = selector.xpath('//dd[@class="basicInfo-item value"]')
+    info_tab = {}
+    for i in range(len(property_key_items)):
+        property_key_item = property_key_items[i]
+        property_key_value = property_key_item.xpath('string(.)')
+        property_key_value = get_safe_format_key(property_key_value)  # .replace('\xa0','').replace(' ','')
+        property_value_item = property_value_items[i]
+        property_value_value = property_value_item.xpath('string(.)')
+        property_value_value = property_value_value.replace('\xa0', '').replace(' ', '').replace("\\", '\\\\').replace(
+            '"', '\\"')
+        if property_value_value.startswith('\n'):
+            property_value_value = property_value_value[1:]
+        if property_value_value.endswith('\n'):
+            property_value_value = property_value_value[:-1]
+        property_value_value = property_value_value.replace('\n', '、')
+        info_tab[property_key_value] = property_value_value
+    return info_tab
+
+
+digit_array = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
+chinese_array = ["零", "一", "二", "三", "四", "五", "六", "七", "八", "九"]
+
+
+def is_chinese(word):
+    for ch in word:
+        if '\u4e00' <= ch <= '\u9fff':
+            return True
+    return False
+
+
+def get_safe_format_key(text):
+    new_text = ""
+    for i in range(len(text)):
+        found_index = -1
+        for j in range(len(digit_array)):
+            if text[i] == digit_array[j]:
+                found_index = j
+
+        if found_index > 0:
+            new_text += chinese_array[found_index]
+        else:
+            if is_chinese(text[i]):
+                new_text += text[i]
+
+    if new_text == '':
+        new_text = '未知属性'
+
+    return new_text
 
 
 def get_tag_list(html):
